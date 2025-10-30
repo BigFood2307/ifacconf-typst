@@ -10,29 +10,23 @@
 #let ifacconf(
   // The paper's title.
   title: "Paper Title",
-
   // An array of authors. For each author you can specify a name, email
   // (optional), and affiliation. The affiliation must be an integer
   // corresponding to an entry in the 1-indexed affiliations list (or 0 for no
   // affiliation).
   authors: (),
-
   // An array of affiliations. For each affiliation you can specify a
   // department, organization, and address. Everything is optional (i.e., an
   // affiliation can be an empty array).
   affiliations: (),
-
   // The paper's abstract. Can be omitted if you don't have one.
   abstract: none,
-
   // A list of index terms to display after the abstract.
   keywords: (),
-
   // Sponsor or financial support acknowledgment
   sponsor: none,
-
   // The paper's content.
-  body
+  body,
 ) = {
   // Set document metadata.
   set document(title: title, author: authors.map(author => author.name))
@@ -44,7 +38,7 @@
   set page(
     paper: "a4",
     // The margins depend on the paper size.
-    margin: (x: 1.5cm, y: 2.5cm)
+    margin: (x: 1.5cm, y: 2.5cm),
   )
 
   // Set line spacing
@@ -62,8 +56,8 @@
         it.element.label,
         numbering(
           it.element.numbering,
-          ..counter(math.equation).at(it.element.location())
-        )
+          ..counter(math.equation).at(it.element.location()),
+        ),
       )
     } else {
       // Other references as usual.
@@ -157,7 +151,17 @@
       // Display the authors list.
       #let alist = ()
       #for (i, a) in authors.enumerate() {
-        let mark = text(8pt, [\*] * (a.affiliation))
+        let mark = []
+        if type(a.affiliation) != array {
+          mark = text(8pt, [\*] * (a.affiliation))
+        } else {
+          for (i, aff) in a.affiliation.enumerate() {
+            if i != 0 {
+              mark = mark + text(8pt, [,])
+            }
+            mark = mark + text(8pt, [\*] * (aff))
+          }
+        }
         alist.push(box([#strong(a.name)#h(2pt)#mark]))
       }
       #alist.join(h(4pt))
@@ -165,26 +169,32 @@
 
       // Display the affiliations list
       #for (i, af) in affiliations.enumerate() {
-          let mark = text(8pt, [\*] * (i + 1))
-          let email-array = ()
-          for au in authors {
+        let mark = text(8pt, [\*] * (i + 1))
+        let email-array = ()
+        for au in authors {
+          if type(au.affiliation) != array {
             if "affiliation" in au and au.affiliation == i + 1 and "email" in au {
               email-array.push(au.email)
             }
+          } else {
+            if "affiliation" in au and au.affiliation.at(0) == i + 1 and "email" in au {
+              email-array.push(au.email)
+            }
           }
-          let emails = ""
-          if email-array.len() > 0 {
-            emails = "(email: " + email-array.join(", ") + ")"
-          }
-          
-          let affil-array = ()
-          if "department" in af { affil-array.push(af.department) }
-          if "organization" in af { affil-array.push(af.organization) }
-          if "address" in af { affil-array.push(af.address) }
-          let affil = affil-array.join(", ")
-          
-          [#mark #emph(affil) #emph(emails)]
-          if i != affiliations.len() - 1 [ \ ]
+        }
+        let emails = ""
+        if email-array.len() > 0 {
+          emails = "(email: " + email-array.join(", ") + ")"
+        }
+
+        let affil-array = ()
+        if "department" in af { affil-array.push(af.department) }
+        if "organization" in af { affil-array.push(af.organization) }
+        if "address" in af { affil-array.push(af.address) }
+        let affil = affil-array.join(", ")
+
+        [#mark #emph(affil) #emph(emails)]
+        if i != affiliations.len() - 1 [ \ ]
       }
       #v(3mm, weak: false)
     ],
@@ -207,11 +217,11 @@
         #v(-2.5mm)
         #line(length: 100%, stroke: 0.4pt)
       ],
-      []
+      [],
     )
     v(0mm, weak: false)
   }
-  
+
   // Start two column mode and configure paragraph properties.
   show: columns.with(2, gutter: 5mm)
   // show: columns.with(2, gutter: 3.5mm)
@@ -219,18 +229,17 @@
   set par(spacing: 3.5mm)
 
   if sponsor != none {
-    scale(x: 0%, y:0%)[#footnote(numbering: (..nums) => super(text(7pt, star)))[#h(5pt)#sponsor]]
+    scale(x: 0%, y: 0%)[#footnote(numbering: (..nums) => super(text(7pt, star)))[#h(5pt)#sponsor]]
     v(-9mm)
     counter(footnote).update(0)
   }
 
   // Display the paper's contents.
   body
-
 }
 
 #import "@preview/ctheorems:1.1.3": *
-#let ifacconf-rules(doc) = { 
+#let ifacconf-rules(doc) = {
   show bibliography: set block(spacing: 5pt)
   show: thmrules
   doc
@@ -259,11 +268,16 @@
   (name, number, body, ..args) => {
     set align(left)
     set par(justify: true)
-    block(inset: 0mm, radius: 0mm, breakable: false, width: 100%)[_Theorem #number#if name != none [ (#name)]._#h(2pt)#body]
+    block(
+      inset: 0mm,
+      radius: 0mm,
+      breakable: false,
+      width: 100%,
+    )[_Theorem #number#if name != none [ (#name)]._#h(2pt)#body]
   },
 ).with(
   supplement: "Theorem",
-  )
+)
 
 #let lemma = thmenv(
   "lemma",
@@ -272,11 +286,16 @@
   (name, number, body, ..args) => {
     set align(left)
     set par(justify: true)
-    block(inset: 0mm, radius: 0mm, breakable: false, width: 100%)[_Lemma #number#if name != none [ (#name)]._#h(2pt)#body]
+    block(
+      inset: 0mm,
+      radius: 0mm,
+      breakable: false,
+      width: 100%,
+    )[_Lemma #number#if name != none [ (#name)]._#h(2pt)#body]
   },
 ).with(
   supplement: "Lemma",
-  )
+)
 
 #let claim = thmenv(
   "claim",
@@ -285,11 +304,16 @@
   (name, number, body, ..args) => {
     set align(left)
     set par(justify: true)
-    block(inset: 0mm, radius: 0mm, breakable: false, width: 100%)[_Claim #number#if name != none [ (#name)]._#h(2pt)#body]
+    block(
+      inset: 0mm,
+      radius: 0mm,
+      breakable: false,
+      width: 100%,
+    )[_Claim #number#if name != none [ (#name)]._#h(2pt)#body]
   },
 ).with(
   supplement: "Claim",
-  )
+)
 
 #let conjecture = thmenv(
   "conjecture",
@@ -298,11 +322,16 @@
   (name, number, body, ..args) => {
     set align(left)
     set par(justify: true)
-    block(inset: 0mm, radius: 0mm, breakable: false, width: 100%)[_Conjecture #number#if name != none [ (#name)]._#h(2pt)#body]
+    block(
+      inset: 0mm,
+      radius: 0mm,
+      breakable: false,
+      width: 100%,
+    )[_Conjecture #number#if name != none [ (#name)]._#h(2pt)#body]
   },
 ).with(
   supplement: "Conjecture",
-  )
+)
 
 #let corollary = thmenv(
   "corollary",
@@ -311,11 +340,16 @@
   (name, number, body, ..args) => {
     set align(left)
     set par(justify: true)
-    block(inset: 0mm, radius: 0mm, breakable: false, width: 100%)[_Corollary #number#if name != none [ (#name)]._#h(2pt)#body]
+    block(
+      inset: 0mm,
+      radius: 0mm,
+      breakable: false,
+      width: 100%,
+    )[_Corollary #number#if name != none [ (#name)]._#h(2pt)#body]
   },
 ).with(
   supplement: "Corollary",
-  )
+)
 
 #let fact = thmenv(
   "fact",
@@ -324,11 +358,16 @@
   (name, number, body, ..args) => {
     set align(left)
     set par(justify: true)
-    block(inset: 0mm, radius: 0mm, breakable: false, width: 100%)[_Fact #number#if name != none [ (#name)]._#h(2pt)#body]
+    block(
+      inset: 0mm,
+      radius: 0mm,
+      breakable: false,
+      width: 100%,
+    )[_Fact #number#if name != none [ (#name)]._#h(2pt)#body]
   },
 ).with(
   supplement: "Fact",
-  )
+)
 
 #let hypothesis = thmenv(
   "hypothesis",
@@ -337,11 +376,16 @@
   (name, number, body, ..args) => {
     set align(left)
     set par(justify: true)
-    block(inset: 0mm, radius: 0mm, breakable: false, width: 100%)[_Hypothesis #number#if name != none [ (#name)]._#h(2pt)#body]
+    block(
+      inset: 0mm,
+      radius: 0mm,
+      breakable: false,
+      width: 100%,
+    )[_Hypothesis #number#if name != none [ (#name)]._#h(2pt)#body]
   },
 ).with(
   supplement: "Hypothesis",
-  )
+)
 
 #let proposition = thmenv(
   "proposition",
@@ -350,11 +394,16 @@
   (name, number, body, ..args) => {
     set align(left)
     set par(justify: true)
-    block(inset: 0mm, radius: 0mm, breakable: false, width: 100%)[_Proposition #number#if name != none [ (#name)]._#h(2pt)#body]
+    block(
+      inset: 0mm,
+      radius: 0mm,
+      breakable: false,
+      width: 100%,
+    )[_Proposition #number#if name != none [ (#name)]._#h(2pt)#body]
   },
 ).with(
   supplement: "Proposition",
-  )
+)
 
 #let criterion = thmenv(
   "criterion",
@@ -363,11 +412,16 @@
   (name, number, body, ..args) => {
     set align(left)
     set par(justify: true)
-    block(inset: 0mm, radius: 0mm, breakable: false, width: 100%)[_Criterion #number#if name != none [ (#name)]._#h(2pt)#body]
+    block(
+      inset: 0mm,
+      radius: 0mm,
+      breakable: false,
+      width: 100%,
+    )[_Criterion #number#if name != none [ (#name)]._#h(2pt)#body]
   },
 ).with(
   supplement: "Criterion",
-  )
+)
 
 #let proof = thmbox(
   "proof",
@@ -375,7 +429,7 @@
   inset: 0mm,
   base: none,
   bodyfmt: body => [#body #h(1fr) $square$],
-  separator: [.#h(2pt)]
+  separator: [.#h(2pt)],
 ).with(numbering: none)
 
 #let footnote = it => footnote[#h(4pt)#it]
